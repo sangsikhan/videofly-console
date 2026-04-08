@@ -13,23 +13,42 @@ VideoFly SaaS는 [Mux](https://www.mux.com) 인프라를 기반으로 구축된 
 
 ```
 docs/
+├── site-map.md            # 전체 사이트 구조 및 사용자 여정
+│
 ├── requirements/          # 서비스 요구사항
 │   ├── 01-overview.md          서비스 개요 및 목표
-│   ├── 02-functional.md        기능 요구사항
-│   └── 03-non-functional.md    비기능 요구사항
+│   ├── 02-functional.md        기능 요구사항 (콘솔)
+│   ├── 03-non-functional.md    비기능 요구사항
+│   └── 04-public-landing-auth.md  공개 영역 요구사항 (랜딩·인증·문서)
 │
-├── pages/                 # 페이지별 기획/설계
-│   ├── 01-dashboard.md         대시보드
-│   ├── 02-video-upload.md      동영상 업로드
-│   ├── 03-video-list.md        동영상 목록
-│   ├── 04-video-detail.md      동영상 상세 및 편집
-│   ├── 05-live-list.md         라이브 목록
-│   ├── 06-live-create.md       라이브 생성
-│   ├── 07-live-studio.md       라이브 스튜디오
-│   ├── 08-analytics.md         분석 / 통계
-│   ├── 09-player-settings.md   플레이어 설정
-│   ├── 10-api-settings.md      API 설정
-│   └── 11-billing.md           요금제 및 청구
+├── pages/
+│   ├── public/            # 공개 마케팅 페이지 (비로그인)
+│   │   ├── 01-landing.md       랜딩 페이지 (/)
+│   │   ├── 02-pricing.md       요금제 (/pricing)
+│   │   └── 03-features.md      기능 소개 (/features)
+│   │
+│   ├── auth/              # 인증 플로우
+│   │   ├── 01-signup.md        회원가입 (/signup)
+│   │   ├── 02-login.md         로그인 (/login)
+│   │   ├── 03-password-reset.md 비밀번호 재설정
+│   │   └── 04-onboarding.md    온보딩 (/onboarding)
+│   │
+│   ├── docs-site/         # 공개 기술 문서 사이트
+│   │   ├── 01-docs-home.md     문서 홈 (docs./)
+│   │   └── 02-quickstart.md    5분 빠른 시작
+│   │
+│   └── (콘솔 페이지)      # 로그인 후 콘솔
+│       ├── 01-dashboard.md         대시보드
+│       ├── 02-video-upload.md      동영상 업로드
+│       ├── 03-video-list.md        동영상 목록
+│       ├── 04-video-detail.md      동영상 상세 및 편집
+│       ├── 05-live-list.md         라이브 목록
+│       ├── 06-live-create.md       라이브 생성
+│       ├── 07-live-studio.md       라이브 스튜디오
+│       ├── 08-analytics.md         분석 / 통계
+│       ├── 09-player-settings.md   플레이어 설정
+│       ├── 10-api-settings.md      API 설정
+│       └── 11-billing.md           요금제 및 청구
 │
 └── api/                   # API 레퍼런스
     ├── 01-authentication.md    인증
@@ -59,6 +78,16 @@ docs/
 
 ## 주요 기능 요약
 
+### 공개 영역 (비로그인)
+- **랜딩 페이지** — 히어로, 기능 소개, 라이브 데모 플레이어, 요금제 요약, FAQ
+- **요금제 페이지** — Free/Starter/Pro/Enterprise 비교표, 월간/연간 토글, 초과 요금 안내
+- **기능 소개 페이지** — VOD·라이브·플레이어·보안·분석·API 상세 설명
+- **회원가입** — 이메일 가입 / Google OAuth, 카드 없는 Free 플랜 즉시 가입
+- **로그인** — 이메일 / Google OAuth, Refresh Token 세션
+- **온보딩** — 용도 선택 → 첫 동영상 업로드 → Aha Moment 체험 → API 키 안내
+- **공개 문서 사이트** — 5분 빠른 시작, 가이드, API 레퍼런스, 코드 예시
+
+### 콘솔 (로그인 후)
 - **동영상 관리** — 업로드(Direct Upload / URL 수집), 인코딩, 자막, 썸네일, 클립 생성
 - **라이브 스트리밍** — RTMP/SRT 수신, 동시 멀티 송출(Simulcast), 자동 VOD 전환
 - **플레이어** — 반응형 임베드, 브랜딩 커스터마이즈, 서명된 URL 재생
