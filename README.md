@@ -1,104 +1,36 @@
-# VideoFly SaaS Console
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-> Mux 기반 동영상 SaaS 플랫폼 — VideoFly Console 개발 문서
+## Getting Started
 
-## 프로젝트 개요
+First, run the development server:
 
-VideoFly SaaS는 [Mux](https://www.mux.com) 인프라를 기반으로 구축된 동영상 호스팅·스트리밍 플랫폼입니다.  
-기업 및 개발자에게 동영상 업로드, 인코딩, 재생, 라이브 스트리밍, 분석 기능을 API 및 웹 콘솔 형태로 제공합니다.
-
----
-
-## 문서 구조
-
-```
-docs/
-├── site-map.md            # 전체 사이트 구조 및 사용자 여정
-│
-├── requirements/          # 서비스 요구사항
-│   ├── 01-overview.md          서비스 개요 및 목표
-│   ├── 02-functional.md        기능 요구사항 (콘솔)
-│   ├── 03-non-functional.md    비기능 요구사항
-│   └── 04-public-landing-auth.md  공개 영역 요구사항 (랜딩·인증·문서)
-│
-├── pages/
-│   ├── public/            # 공개 마케팅 페이지 (비로그인)
-│   │   ├── 01-landing.md       랜딩 페이지 (/)
-│   │   ├── 02-pricing.md       요금제 (/pricing)
-│   │   └── 03-features.md      기능 소개 (/features)
-│   │
-│   ├── auth/              # 인증 플로우
-│   │   ├── 01-signup.md        회원가입 (/signup)
-│   │   ├── 02-login.md         로그인 (/login)
-│   │   ├── 03-password-reset.md 비밀번호 재설정
-│   │   └── 04-onboarding.md    온보딩 (/onboarding)
-│   │
-│   ├── docs-site/         # 공개 기술 문서 사이트
-│   │   ├── 01-docs-home.md     문서 홈 (docs./)
-│   │   └── 02-quickstart.md    5분 빠른 시작
-│   │
-│   └── (콘솔 페이지)      # 로그인 후 콘솔
-│       ├── 01-dashboard.md         대시보드
-│       ├── 02-video-upload.md      동영상 업로드
-│       ├── 03-video-list.md        동영상 목록
-│       ├── 04-video-detail.md      동영상 상세 및 편집
-│       ├── 05-live-list.md         라이브 목록
-│       ├── 06-live-create.md       라이브 생성
-│       ├── 07-live-studio.md       라이브 스튜디오
-│       ├── 08-analytics.md         분석 / 통계
-│       ├── 09-player-settings.md   플레이어 설정
-│       ├── 10-api-settings.md      API 설정
-│       └── 11-billing.md           요금제 및 청구
-│
-└── api/                   # API 레퍼런스
-    ├── 01-authentication.md    인증
-    ├── 02-videos-api.md        동영상 API
-    ├── 03-live-streams-api.md  라이브 스트림 API
-    ├── 04-player-api.md        플레이어 API
-    ├── 05-analytics-api.md     분석 API
-    └── 06-webhooks.md          웹훅
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
----
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## 핵심 기술 스택
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-| 레이어 | 기술 |
-|--------|------|
-| 동영상 인프라 | [Mux Video](https://www.mux.com/video-streaming-api) |
-| 라이브 스트리밍 | [Mux Live](https://www.mux.com/live) |
-| 분석 | [Mux Data](https://www.mux.com/data) |
-| 플레이어 | [Mux Player](https://www.mux.com/player) |
-| 인코딩 | Mux per-title AI 인코딩 (H.264 / HEVC / AV1) |
-| 전송 | HLS Adaptive Bitrate (ABR), CDN 글로벌 배포 |
-| 보안 | Signed JWT Playback URL, DRM |
-| 웹훅 | Mux Webhook → VideoFly 이벤트 처리 |
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
----
+## Learn More
 
-## 주요 기능 요약
+To learn more about Next.js, take a look at the following resources:
 
-### 공개 영역 (비로그인)
-- **랜딩 페이지** — 히어로, 기능 소개, 라이브 데모 플레이어, 요금제 요약, FAQ
-- **요금제 페이지** — Free/Starter/Pro/Enterprise 비교표, 월간/연간 토글, 초과 요금 안내
-- **기능 소개 페이지** — VOD·라이브·플레이어·보안·분석·API 상세 설명
-- **회원가입** — 이메일 가입 / Google OAuth, 카드 없는 Free 플랜 즉시 가입
-- **로그인** — 이메일 / Google OAuth, Refresh Token 세션
-- **온보딩** — 용도 선택 → 첫 동영상 업로드 → Aha Moment 체험 → API 키 안내
-- **공개 문서 사이트** — 5분 빠른 시작, 가이드, API 레퍼런스, 코드 예시
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-### 콘솔 (로그인 후)
-- **동영상 관리** — 업로드(Direct Upload / URL 수집), 인코딩, 자막, 썸네일, 클립 생성
-- **라이브 스트리밍** — RTMP/SRT 수신, 동시 멀티 송출(Simulcast), 자동 VOD 전환
-- **플레이어** — 반응형 임베드, 브랜딩 커스터마이즈, 서명된 URL 재생
-- **분석** — 재생 품질(QoE), 시청자 행동, 실시간 모니터링, 데이터 내보내기
-- **보안** — 서명된 재생 URL, 도메인 허용 목록, DRM
-- **API / 웹훅** — RESTful API, 이벤트 기반 웹훅, 다중 SDK 지원
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
----
+## Deploy on Vercel
 
-## 관련 참고
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-- [Mux 공식 문서](https://docs.mux.com)
-- [VideoFly 서비스 설정 참조](https://doc.m2live.co.kr/references/settings/functions/services/videofly.html)
-- [Mux API 레퍼런스](https://docs.mux.com/api-reference/video)
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
