@@ -1,6 +1,8 @@
 # VideoFly SaaS — 전체 사이트 구조 및 사용자 여정
 
-## 1. 사이트 도메인 구분
+---
+
+## 1. 도메인 구분
 
 | 도메인 | 역할 |
 |--------|------|
@@ -8,7 +10,8 @@
 | `console.videofly.co.kr` | 서비스 콘솔 (가입 후 사용) |
 | `docs.videofly.co.kr` | 공개 기술 문서 |
 | `api.videofly.co.kr` | REST API |
-| `stream.mux.com` | 동영상 재생 (Mux CDN) |
+| `stream.videofly.co.kr` | HLS/DASH 동영상 스트리밍 (OCI CDN 경유) |
+| `thumb.videofly.co.kr` | 썸네일 이미지 (OCI CDN 경유) |
 
 ---
 
@@ -17,12 +20,10 @@
 ```
 [비로그인 공개 영역]
 videofly.co.kr/
-├── /                           랜딩 페이지 (메인)
+├── /                           랜딩 페이지
 ├── /features                   기능 소개
 ├── /pricing                    요금제
-├── /use-cases                  사용 사례 (기업, 개발자, 교육 등)
-│
-├── /signup                     회원가입
+├── /signup                     회원가입 (Free 카드 불필요)
 ├── /login                      로그인
 ├── /forgot-password            비밀번호 찾기
 └── /reset-password             비밀번호 재설정
@@ -30,157 +31,206 @@ videofly.co.kr/
 docs.videofly.co.kr/
 ├── /                           문서 홈
 ├── /quickstart                 5분 빠른 시작
-├── /guides/
-│   ├── /video-upload           동영상 업로드 가이드
-│   ├── /live-streaming         라이브 스트리밍 가이드
-│   ├── /player-embed           플레이어 임베드 가이드
-│   ├── /signed-playback        보안 재생 가이드
-│   └── /webhooks               웹훅 연동 가이드
-└── /api/
-    ├── /videos                 동영상 API 레퍼런스
-    ├── /live-streams           라이브 스트림 API 레퍼런스
-    ├── /player                 플레이어 API 레퍼런스
-    ├── /analytics              분석 API 레퍼런스
-    └── /webhooks               웹훅 레퍼런스
+├── /guides/*                   가이드 모음
+└── /api/*                      API 레퍼런스
 
-[로그인 후 콘솔 영역]
+[로그인 후 콘솔]
 console.videofly.co.kr/
-├── /onboarding                 최초 로그인 온보딩 (신규 계정)
-├── /dashboard                  대시보드
+├── /onboarding                 온보딩 (5단계)
+│   ├── 조직 생성
+│   ├── 플랜 선택 (Free/Pro)
+│   ├── 용도 선택
+│   ├── 첫 동영상 업로드
+│   └── 재생 확인 (Aha Moment)
+│
+├── /dashboard                  대시보드 (조직 컨텍스트)
+│
 ├── /videos                     동영상 목록
-│   ├── /videos/upload          업로드
-│   └── /videos/:id             상세
+│   ├── /videos/upload          업로드 (OCI Direct Upload)
+│   └── /videos/:vid_id         상세 (프로파일 에셋 현황 포함)
+│
 ├── /live                       라이브 목록
 │   ├── /live/new               새 라이브 생성
-│   └── /live/:id/studio        라이브 스튜디오
-├── /analytics                  분석
+│   └── /live/:liv_id/studio    라이브 스튜디오
+│
+├── /analytics                  분석 (Flink + ClickHouse 기반)
+│
 └── /settings/
     ├── /settings/player        플레이어 설정
-    ├── /settings/api           API 설정
-    └── /settings/account       계정 설정
+    ├── /settings/api           API 키 + 웹훅
+    ├── /settings/organization  조직 기본 정보
+    ├── /settings/members       사용자 관리 + 초대
+    ├── /settings/roles         역할/권한 관리 (RBAC)
+    └── /settings/billing       요금제 + 청구
 ```
 
 ---
 
-## 3. 사용자 여정 (User Journey)
+## 3. 사용자 여정
 
 ### 3.1 신규 방문자 → 가입 → 첫 사용
 
 ```
-[마케팅 유입]
-Google 검색 / SNS / 블로그
+[마케팅 유입 / 검색]
         │
         ▼
-[랜딩 페이지 /]
-히어로 섹션 → 핵심 기능 → 데모 영상 → 요금제 요약 → CTA
-        │
-        ├── 더 알아보기 → /features
-        ├── 요금제 확인 → /pricing
-        ├── 문서 보기  → docs.videofly.co.kr
-        └── 무료 시작  → /signup
-                │
-                ▼
-        [회원가입 /signup]
-        이메일+비밀번호 또는 Google OAuth
-                │
-                ▼
-        [이메일 인증]
-        인증 링크 클릭
-                │
-                ▼
-        [온보딩 /onboarding]
-        서비스 용도 선택 → 사용 규모 입력 → 첫 단계 안내
-                │
-                ▼
-        [대시보드 /dashboard]
-        빠른 시작 가이드 표시
-```
-
-### 3.2 재방문 사용자 → 로그인
-
-```
-[랜딩 / 북마크]
+[랜딩 페이지]
+ 히어로 → 기능 → 데모 플레이어 → 요금제 → CTA
         │
         ▼
-[로그인 /login]
+[회원가입 /signup]
+ 이메일 or Google OAuth  ·  카드 불필요(Free)
         │
-        ├── 성공 → 마지막 방문 페이지 또는 /dashboard
-        ├── 비밀번호 분실 → /forgot-password
-        └── 미가입 → /signup 유도
+        ▼
+[이메일 인증]
+        │
+        ▼
+[온보딩 /onboarding]
+ 1. 조직 생성 (org_id 발급)
+ 2. Free / Pro 체험 선택
+ 3. 용도 선택
+ 4. 첫 동영상 업로드 → OCI 저장 → JIT Warm-up
+ 5. 재생 확인 (vid_id + 임베드 코드 제공)
+        │
+        ▼
+[대시보드 /dashboard]
 ```
 
-### 3.3 개발자 → 문서 → 가입
+### 3.2 개발자 → 문서 → 가입
 
 ```
-[구글 검색: "동영상 API 한국어"]
+[검색: "동영상 API 한국어"]
         │
         ▼
 [docs.videofly.co.kr/quickstart]
+        │ API 키 필요
+        ▼
+[회원가입 /signup]
         │
         ▼
-[API 키 필요] → "무료 계정 만들기" CTA
+[온보딩] → [API 키 발급 /settings/api]
+```
+
+### 3.3 Free → Paid 전환
+
+```
+[한도 90% 도달]
         │
         ▼
-[/signup] → [온보딩] → [API 설정 /settings/api]
+[인앱 업그레이드 배너]
+        │
+        ▼
+[/settings/billing → 플랜 변경]
+ 카드 등록 → 플랜 선택 → 즉시 적용
+```
+
+### 3.4 팀 협업 시작 (멀티 유저)
+
+```
+[Admin]
+  /settings/members → [멤버 초대]
+  이메일 입력 + 역할 선택 (Admin/Manager/Developer/Viewer)
+        │
+        ▼
+[초대 이메일 발송]
+        │
+        ▼
+[피초대자: 수락]
+  기존 계정 → 조직 합류
+  신규 계정 → 가입 → 간소화 온보딩 → 조직 합류
 ```
 
 ---
 
-## 4. Free 플랜 전환 구조
+## 4. 조직 모델
 
 ```
-[랜딩 / 요금제 페이지]
-        │
-   "무료로 시작" CTA 클릭
-        │
-        ▼
-[/signup]
-  Free 플랜 자동 적용 (카드 등록 불필요)
-        │
-        ▼
-[Free 플랜 한도]
-  - 재생 시간: 500분/월
-  - 저장 용량: 5GB
-  - 라이브: 불가
-  - 신용카드 없이 즉시 사용 가능
-        │
-   한도 초과 또는 추가 기능 필요
-        │
-        ▼
-[업그레이드 모달 / /billing]
-  Starter · Pro · Enterprise 비교
+사용자 계정 (usr_id)
+    │ 복수 조직 소속 가능
+    ▼
+┌───────────────────────┐  ┌───────────────────────┐
+│  조직 A (org_id_AAA)  │  │  조직 B (org_id_BBB)  │
+│  역할: Admin          │  │  역할: Developer       │
+│                       │  │                       │
+│  동영상 (vid_*)       │  │  동영상 (vid_*)        │
+│  라이브 (liv_*)       │  │  라이브 (liv_*)        │
+│  API 키               │  │  API 키                │
+└───────────────────────┘  └───────────────────────┘
+        ↑ 조직 간 리소스 완전 격리
 ```
 
 ---
 
-## 5. 페이지 파일 목록 (전체)
+## 5. 문서 파일 목록 (전체)
+
+### 아키텍처 (`docs/architecture/`)
+
+| 파일 | 내용 |
+|------|------|
+| `01-video-farm-oci.md` | OCI 동영상 팜 Data Plane 구조 |
+| `02-jit-pipeline.md` | JIT 트랜스코딩 + 패키징 파이프라인 |
+| `03-id-system.md` | ULID 기반 ID 체계 및 DB 스키마 |
+
+### 요구사항 (`docs/requirements/`)
+
+| 파일 | 내용 |
+|------|------|
+| `01-overview.md` | 서비스 개요, 기술 스택, KPI |
+| `02-functional.md` | 기능 요구사항 (JIT, 조직, RBAC, 전환) |
+| `03-non-functional.md` | 성능, 가용성, 보안 |
+| `04-public-landing-auth.md` | 공개 영역 요구사항 |
 
 ### 공개 페이지 (`docs/pages/public/`)
 
-| 파일 | Route | 상태 |
-|------|-------|------|
-| `01-landing.md` | `/` | 신규 |
-| `02-features.md` | `/features` | 신규 |
-| `03-pricing.md` | `/pricing` | 신규 |
+| 파일 | Route |
+|------|-------|
+| `01-landing.md` | `/` |
+| `02-pricing.md` | `/pricing` |
+| `03-features.md` | `/features` |
 
-### 인증 페이지 (`docs/pages/auth/`)
+### 인증 플로우 (`docs/pages/auth/`)
 
-| 파일 | Route | 상태 |
-|------|-------|------|
-| `01-signup.md` | `/signup` | 신규 |
-| `02-login.md` | `/login` | 신규 |
-| `03-password-reset.md` | `/forgot-password`, `/reset-password` | 신규 |
-| `04-onboarding.md` | `/onboarding` | 신규 |
+| 파일 | Route |
+|------|-------|
+| `01-signup.md` | `/signup` |
+| `02-login.md` | `/login` |
+| `03-password-reset.md` | `/forgot-password` |
+| `04-onboarding.md` | `/onboarding` (5단계, 조직 생성 포함) |
 
-### 공개 문서 (`docs/pages/docs-site/`)
+### 공개 문서 사이트 (`docs/pages/docs-site/`)
 
-| 파일 | Route | 상태 |
-|------|-------|------|
-| `01-docs-home.md` | `docs./` | 신규 |
-| `02-quickstart.md` | `docs./quickstart` | 신규 |
+| 파일 | Route |
+|------|-------|
+| `01-docs-home.md` | `docs./` |
+| `02-quickstart.md` | `docs./quickstart` |
 
-### 콘솔 페이지 (`docs/pages/`) — 기존
+### 콘솔 페이지 (`docs/pages/` + `docs/pages/console/`)
 
-| 파일 | Route | 상태 |
-|------|-------|------|
-| `01-dashboard.md` ~ `11-billing.md` | `/dashboard` 외 | 기존 ✅ |
+| 파일 | Route |
+|------|-------|
+| `01-dashboard.md` | `/dashboard` (조직 컨텍스트) |
+| `02-video-upload.md` | `/videos/upload` (OCI JIT 흐름) |
+| `03-video-list.md` | `/videos` |
+| `04-video-detail.md` | `/videos/:vid_id` (프로파일 에셋) |
+| `05-live-list.md` | `/live` |
+| `06-live-create.md` | `/live/new` |
+| `07-live-studio.md` | `/live/:id/studio` |
+| `08-analytics.md` | `/analytics` |
+| `09-player-settings.md` | `/settings/player` |
+| `10-api-settings.md` | `/settings/api` |
+| `11-billing.md` | `/settings/billing` |
+| `console/12-org-management.md` | `/settings/organization` |
+| `console/13-user-management.md` | `/settings/members` |
+| `console/14-role-management.md` | `/settings/roles` |
+
+### API 레퍼런스 (`docs/api/`)
+
+| 파일 | 내용 |
+|------|------|
+| `01-authentication.md` | 인증 (Basic Auth, JWT, Signed URL) |
+| `02-videos-api.md` | 동영상 API |
+| `03-live-streams-api.md` | 라이브 스트림 API |
+| `04-player-api.md` | 플레이어 SDK |
+| `05-analytics-api.md` | 분석 API |
+| `06-webhooks.md` | 웹훅 |
+| `07-organizations-api.md` | 조직/사용자/RBAC API |

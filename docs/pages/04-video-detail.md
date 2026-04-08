@@ -1,32 +1,31 @@
 # 페이지: 동영상 상세 및 편집 (Video Detail)
 
-**Route:** `/videos/:id`  
-**접근 권한:** Read(조회) / Write(편집, 삭제)
+**Route:** `/videos/:vid_id`  
+**접근 권한:** Viewer(조회) / Developer+(편집) / Manager+(삭제·정책변경)
 
 ---
 
 ## 1. 페이지 목적
 
-개별 동영상의 상세 정보 조회, 메타데이터 편집, 자막·썸네일 관리,  
-재생 설정, 임베드 코드 생성, 분석 요약을 제공하는 페이지.
+개별 동영상의 상세 정보 조회, 메타데이터 편집, 프로파일 에셋 현황,  
+자막·썸네일 관리, 재생 설정, 임베드 코드 생성, 통계 요약을 제공하는 페이지.
 
 ---
 
 ## 2. 레이아웃 구성
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  ← 동영상 목록   /   제품 데모 v2         [저장] [삭제]  │
-├───────────────────────┬──────────────────────────────────┤
-│                       │  [탭]                            │
-│  [동영상 미리보기       │  ● 기본 정보  ○ 자막  ○ 썸네일  │
-│   플레이어]           │  ○ 재생 설정  ○ 임베드  ○ 통계   │
-│                       │                                  │
-│  상태: ● 준비 완료     │  [탭 콘텐츠 영역]                │
-│  시간: 2:05           │                                  │
-│  에셋 ID: abc123      │                                  │
-│  생성일: 2024-03-15   │                                  │
-└───────────────────────┴──────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  ← 동영상 목록  /  제품 데모 v2        [저장] [삭제]         │
+├───────────────────────────────────────────────────────────────┤
+│                       │                                      │
+│  [동영상 미리보기 플레이어]│  [탭]                            │
+│                       │  ● 기본 정보                         │
+│  상태: ● 재생 가능     │  ○ 프로파일 에셋                    │
+│  vid_id: vid_01HXYZ…  │  ○ 자막  ○ 썸네일                   │
+│  org_id: org_01HXYZ…  │  ○ 재생 설정  ○ 임베드  ○ 통계      │
+│  생성일: 2024-03-15   │                                      │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -35,166 +34,164 @@
 
 ### 탭 1. 기본 정보 (Info)
 
-| 필드 | 편집 가능 | 설명 |
-|------|----------|------|
+| 필드 | 편집 | 설명 |
+|------|------|------|
 | 제목 | ✅ | 최대 255자 |
-| 설명 | ✅ | 최대 5,000자, 마크다운 지원 |
+| 설명 | ✅ | 최대 5,000자 |
 | 태그 | ✅ | 최대 20개 |
-| 에셋 ID | ❌ | Mux Asset ID (읽기 전용) |
-| 재생 ID | ❌ | Mux Playback ID |
-| 상태 | ❌ | ready / preparing / errored |
+| Video ID (`vid_id`) | ❌ | `vid_01HXYZ456DEF` — 복사 버튼 |
+| 조직 ID (`org_id`) | ❌ | `org_01HXYZ123ABC` |
+| 재생 ID (`pbk_id`) | ❌ | `pbk_01HXYZGHI789` — 복사 버튼 |
+| 상태 | ❌ | `ready` / `warming_up` / `error` |
 | 재생 시간 | ❌ | hh:mm:ss |
-| 해상도 | ❌ | 1920×1080 (최대 트랙 기준) |
-| 파일 크기 | ❌ | 인코딩 전 원본 크기 |
-| 생성 일시 | ❌ | ISO 8601 |
+| 원본 파일 크기 | ❌ | N GB |
+| 업로드 일시 | ❌ | ISO 8601 |
 
----
-
-### 탭 2. 자막 (Captions)
-
-#### 자막 목록
-
-| 언어 | 유형 | 상태 | 작업 |
-|------|------|------|------|
-| 한국어 (ko) | 업로드됨 | 활성 | 다운로드 / 삭제 |
-| 영어 (en) | AI 자동 생성 | 활성 | 다운로드 / 삭제 |
-
-#### 자막 추가
-
-**방법 1: 파일 업로드**
-- 지원 형식: `.vtt`, `.srt`
-- 언어 선택 (드롭다운)
-- 파일 업로드 버튼
-
-**방법 2: AI 자동 생성**
-- [AI 자막 생성 요청] 버튼
-- 언어 선택 (영어, 한국어, 일본어 등 20+ 언어)
-- 생성 소요 시간: 영상 길이의 약 50%
-- 완료 시 알림 + 자동 목록 갱신
-
-**Mux API 연동:**
-```json
-POST /video/v1/assets/{ASSET_ID}/tracks
-{
-  "url": "https://storage.example.com/subtitle-ko.vtt",
-  "type": "text",
-  "text_type": "subtitles",
-  "language_code": "ko",
-  "name": "한국어",
-  "closed_captions": false
-}
+**원본 파일 경로 (Admin만 표시):**
+```
+oci://vf-origin-bucket/orgs/org_01HXYZ.../videos/vid_01HXYZ.../source.mp4
 ```
 
 ---
 
-### 탭 3. 썸네일 (Thumbnail)
+### 탭 2. 프로파일 에셋 (Profile Assets)
 
-#### 현재 썸네일
+각 `vpa_{vid_id}_{prof_id}` 에셋의 JIT 처리 현황 표시:
 
-- 자동 생성 썸네일 미리보기 (16:9)
-- `https://image.mux.com/{PLAYBACK_ID}/thumbnail.png`
-
-#### 썸네일 변경 옵션
-
-**옵션 1: 시간 지정 캡처**
 ```
-동영상에서 캡처할 시간: [00:01:30] 초
-미리보기: [이미지]
+┌──────────────────────────────────────────────────────────────┐
+│ 프로파일           상태          캐시 크기    만료       재생  │
+├──────────────────────────────────────────────────────────────┤
+│ 1080p H.264        ✅ 캐시됨     1.2 GB      6시간 후        │
+│ prof_1080p_h264                                    [미리보기] │
+├──────────────────────────────────────────────────────────────┤
+│ 720p H.264         ✅ 캐시됨     680 MB      3시간 후        │
+│ prof_720p_h264                                     [미리보기] │
+├──────────────────────────────────────────────────────────────┤
+│ 480p H.264         ⏳ 생성 중    —           —               │
+│ prof_480p_h264     (JIT 처리 진행 중)                        │
+├──────────────────────────────────────────────────────────────┤
+│ 360p H.264         ○ 미생성      —           —               │
+│ prof_360p_h264     (첫 재생 요청 시 생성됩니다)   [강제 생성] │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**상태 설명:**
+
+| 상태 | 아이콘 | 설명 |
+|------|--------|------|
+| `cached` | ✅ | CDN/캐시에 있음, 즉시 재생 가능 |
+| `generating` | ⏳ | JIT 처리 진행 중 |
+| `not_generated` | ○ | 아직 JIT 처리 안 됨 (첫 재생 시 자동 생성) |
+| `expired` | 🕐 | 캐시 만료 (다음 재생 요청 시 재생성) |
+| `failed` | ❌ | 처리 실패 (재시도 버튼) |
+
+**강제 생성 버튼:**  
+`not_generated` 상태 프로파일을 즉시 JIT 처리 요청.
+
+**ABR 마스터 플레이리스트 URL:**
+```
+https://stream.videofly.co.kr/hls/org_01HXYZ.../vid_01HXYZ.../master.m3u8
+[복사]
+```
+
+---
+
+### 탭 3. 자막 (Captions)
+
+**자막 목록:**
+
+| 언어 | Track ID | 유형 | 상태 | 작업 |
+|------|----------|------|------|------|
+| 한국어 (ko) | `trk_01HXYZ` | 업로드 | 활성 | 다운로드 / 삭제 |
+| 영어 (en) | `trk_01HXYZ` | 자동 생성 | 활성 | 다운로드 / 삭제 |
+
+**자막 추가:**
+- 파일 업로드: `.vtt`, `.srt` → 언어 선택
+- 저장 경로: `oci://vf-origin-bucket/.../videos/{vid_id}/subtitles/{trk_id}_ko.vtt`
+
+---
+
+### 탭 4. 썸네일 (Thumbnail)
+
+**자동 생성 썸네일:**
+```
+https://thumb.videofly.co.kr/{org_id}/{vid_id}/thumbnail.jpg
+```
+
+**시점 지정 캡처:**
+```
+동영상에서 캡처할 시간: [00:01:30]
+미리보기: [이미지 표시]
 [이 시점으로 설정]
 ```
 
-**옵션 2: 이미지 직접 업로드**
-- 지원 형식: JPEG, PNG, WebP
-- 권장 크기: 1280×720 (16:9)
-- 최대 크기: 5MB
-
-#### 썸네일 URL 파라미터
-
-| 파라미터 | 예시 | 설명 |
-|---------|------|------|
-| `time` | `?time=10` | 10초 시점 캡처 |
-| `width` | `?width=640` | 너비 지정 |
-| `height` | `?height=360` | 높이 지정 |
-| `fit_mode` | `?fit_mode=crop` | 크롭 방식 |
+**커스텀 썸네일 업로드:**
+- JPEG, PNG, WebP / 권장 1280×720 / 최대 5MB
+- 저장 경로: `oci://vf-origin-bucket/.../videos/{vid_id}/thumbnails/custom_{thm_id}.jpg`
 
 ---
 
-### 탭 4. 재생 설정 (Playback)
+### 탭 5. 재생 설정 (Playback)
 
-#### 재생 정책
-
-| 옵션 | 설명 |
-|------|------|
-| ● 공개 (Public) | 인터넷 누구나 재생 가능 |
-| ○ 서명 필요 (Signed) | JWT 토큰이 있는 요청만 재생 가능 |
-
-#### 서명 필요 설정 시 추가 옵션
-
-- JWT 기본 만료 시간: `3600` 초 (1시간)
-- 도메인 허용 목록:
-  ```
-  example.com
-  app.mysite.co.kr
-  ```
-
-#### MP4 다운로드 옵션
+**재생 정책:**
 
 | 옵션 | 설명 |
 |------|------|
-| 비활성 | 다운로드 불가 |
-| capped-1080p | 최대 1080p MP4 |
-| audio-only | 오디오 전용 MP4 |
+| ● 공개 (Public) | 누구나 재생 가능 |
+| ○ 서명 필요 (Signed) | JWT 토큰 필요 |
+
+**서명 필요 시 JWT 생성 예시:**
+```javascript
+const token = jwt.sign(
+  {
+    sub: "pbk_01HXYZGHI789",  // pbk_id
+    org: "org_01HXYZ123ABC",  // org_id
+    vid: "vid_01HXYZ456DEF",  // vid_id
+    aud: "playback",
+    exp: Math.floor(Date.now() / 1000) + 3600
+  },
+  signingPrivateKey,
+  { algorithm: 'RS256', keyid: 'sign_key_abc' }
+);
+
+const url = `https://stream.videofly.co.kr/hls/org_01HXYZ.../vid_01HXYZ.../master.m3u8?token=${token}`;
+```
+
+**도메인 허용 목록:**
+```
+example.com
+app.mysite.co.kr
+```
 
 ---
 
-### 탭 5. 임베드 (Embed)
+### 탭 6. 임베드 (Embed)
 
-#### 임베드 코드 생성
+**플레이어 설정 후 코드 생성:**
 
-**플레이어 설정:**
-```
-자동재생: □    음소거: □    반복재생: □
-기본 자막: [한국어 ▼]    컨트롤바: ●표시 ○숨김
-```
-
-**iframe 임베드 코드:**
 ```html
+<!-- iframe 임베드 -->
 <iframe
-  src="https://player.videofly.co.kr/abc123"
+  src="https://player.videofly.co.kr/vid_01HXYZ456DEF"
   width="640" height="360"
-  frameborder="0"
-  allow="autoplay; fullscreen"
-  allowfullscreen>
+  frameborder="0" allowfullscreen>
 </iframe>
-```
 
-**Mux Player (Web Component):**
-```html
-<script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-<mux-player
-  playback-id="xyz789"
-  metadata-video-title="제품 데모 v2">
-</mux-player>
-```
+<!-- VideoFly Player Web Component -->
+<script src="https://cdn.videofly.co.kr/player/v1/player.js"></script>
+<vf-player
+  vid-id="vid_01HXYZ456DEF"
+  org-id="org_01HXYZ123ABC">
+</vf-player>
 
-**React 코드:**
-```jsx
-import MuxPlayer from '@mux/mux-player-react';
-
-<MuxPlayer
-  playbackId="xyz789"
-  metadata={{ video_title: '제품 데모 v2' }}
-/>
-```
-
-**직접 재생 URL:**
-```
-HLS: https://stream.mux.com/xyz789.m3u8
+<!-- HLS 직접 재생 URL -->
+https://stream.videofly.co.kr/hls/org_01HXYZ123ABC/vid_01HXYZ456DEF/master.m3u8
 ```
 
 ---
 
-### 탭 6. 통계 (Stats)
+### 탭 7. 통계 (Stats)
 
 기간 필터: 오늘 / 7일 / 30일 / 전체
 
@@ -202,43 +199,28 @@ HLS: https://stream.mux.com/xyz789.m3u8
 |------|---|
 | 총 재생수 | 1,520회 |
 | 순 시청자수 | 980명 |
-| 총 시청 시간 | 52시간 10분 |
-| 평균 시청 시간 | 2분 03초 |
-| 시청 완료율 | 68% |
-| 재생 시작 시간 | 평균 0.8초 |
+| 시청 완료율 | 72% |
+| 평균 시작 시간 | 1.2초 (JIT 캐시 Miss 제외 평균) |
 | 리버퍼링 비율 | 0.3% |
-
-- 일별 재생수 라인 차트
-- 지역별 분포 테이블 (국가 TOP 5)
-- 기기 유형 도넛 차트
+| JIT 캐시 Hit율 | 91% |
 
 ---
 
 ## 4. 삭제 처리
 
-- [삭제] 버튼 클릭 → 확인 모달:
-  ```
-  이 동영상을 삭제하시겠습니까?
-  삭제된 동영상은 복구할 수 없습니다.
-  
-  동영상 제목: 제품 데모 v2
-  
-  [취소]  [삭제]
-  ```
-- Mux API: `DELETE /video/v1/assets/{ASSET_ID}`
-- 삭제 후 → `/videos` 목록으로 리다이렉트
-
----
-
-## 5. 인코딩 중 상태 UI
-
-`status: preparing` 인 경우 플레이어 대신 표시:
-
 ```
-     ⏳ 인코딩 중...
-  영상을 처리하고 있습니다.
-  잠시 후 자동으로 업데이트됩니다.
-  [새로고침]
-```
+이 동영상을 삭제하시겠습니까?
 
-폴링 주기: 10초 간격으로 상태 확인
+삭제 항목:
+  ✗ 원본 파일 (OCI Object Storage)
+  ✗ 모든 프로파일 에셋 (vpa_*)
+  ✗ 캐시된 HLS/DASH 세그먼트
+  ✗ 썸네일 파일
+  ✗ 자막 파일
+  ✗ 분석 데이터 (집계 데이터는 90일 보존)
+
+동영상 제목: 제품 데모 v2
+Video ID: vid_01HXYZ456DEF
+
+[취소]        [영구 삭제]
+```

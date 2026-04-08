@@ -1,13 +1,14 @@
 # 페이지: 동영상 업로드 (Video Upload)
 
 **Route:** `/videos/upload`  
-**접근 권한:** Write 권한 이상
+**접근 권한:** Developer 역할 이상  
+**조직 컨텍스트:** 현재 선택된 조직(org_id)에 귀속
 
 ---
 
 ## 1. 페이지 목적
 
-동영상 파일을 VideoFly(Mux)로 업로드하고 인코딩을 시작하는 페이지.  
+동영상 파일을 VideoFly OCI 동영상 팜으로 업로드하고, JIT 처리를 시작하는 페이지.  
 두 가지 업로드 방식 지원: **직접 업로드(Direct Upload)**, **URL 수집 업로드**.
 
 ---
@@ -15,34 +16,28 @@
 ## 2. 레이아웃 구성
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  헤더: "동영상 업로드"                                    │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│  [탭] ● 파일 업로드    ○ URL로 가져오기                   │
-│                                                          │
-│  ┌─────────────────────────────────────┐                 │
-│  │                                     │                 │
-│  │   ⬆  파일을 여기에 드래그하거나      │                 │
-│  │      클릭하여 선택하세요             │                 │
-│  │                                     │                 │
-│  │   지원 형식: MP4, MOV, AVI, MKV...  │                 │
-│  │   최대 크기: 50GB                   │                 │
-│  └─────────────────────────────────────┘                 │
-│                                                          │
-│  [동영상 메타데이터 입력]                                  │
-│   제목 *: ___________________________                     │
-│   설명  : ___________________________                     │
-│   태그  : ___________________________                     │
-│                                                          │
-│  [고급 설정 펼치기 ▼]                                     │
-│   재생 정책: ● 공개  ○ 서명 필요                          │
-│   MP4 다운로드 허용: □                                    │
-│   자동 자막 생성: □                                       │
-│                                                          │
-│  [업로드 시작] 버튼                                       │
-│                                                          │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  조직: (주)에이비씨  /  동영상 업로드                        │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  [탭] ● 파일 업로드    ○ URL로 가져오기                      │
+│                                                              │
+│  ┌─────────────────────────────────────┐                    │
+│  │   ⬆  파일을 드래그하거나 클릭하세요 │                    │
+│  │   MP4, MOV, AVI, MKV...  최대 50GB  │                    │
+│  └─────────────────────────────────────┘                    │
+│                                                              │
+│  [동영상 메타데이터]                                         │
+│   제목 *: ___________________________                        │
+│   설명  : ___________________________                        │
+│   태그  : ___________________________                        │
+│                                                              │
+│  [고급 설정 ▼]                                               │
+│   재생 정책: ● 공개  ○ 서명 필요                             │
+│   ABR 프로파일 세트: ● 기본 (360p~1080p)  ○ 커스텀         │
+│                                                              │
+│  [업로드 시작]                                               │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -51,74 +46,80 @@
 
 ### 3.1 Direct Upload (파일 직접 업로드)
 
-**흐름:**
+**흐름: 클라이언트 → OCI Object Storage 직접 전송**
 
 ```
-[브라우저] → VideoFly API: "업로드 URL 요청"
-[VideoFly API] → Mux API: POST /video/v1/uploads
-[Mux API] → [VideoFly API]: { upload_url, upload_id }
-[VideoFly API] → [브라우저]: { upload_url }
-[브라우저] → Mux 직접: PUT {upload_url} (파일 바이너리)
-[Mux] → VideoFly Webhook: video.upload.asset_created
-[VideoFly] → DB: asset_id 저장
+[브라우저]
+    │ ① POST /api/v1/videos/upload-url
+    ▼
+[VideoFly API Server]
+    │ ② OCI Pre-Authenticated Request(PAR) URL 생성
+    │    → oci://vf-origin/orgs/{org_id}/videos/{vid_id}/source.mp4
+    ▼
+[브라우저]
+    │ ③ PUT {oci_par_url} (파일 바이너리, VideoFly 서버 미경유)
+    ▼
+[OCI Object Storage]
+    │ ④ Kafka: video.uploaded (vid_id, org_id)
+    ▼
+[JIT Engine Warm-up]
+    - 기본 프로파일(1080p) 백그라운드 사전 처리 시작
+    - 첫 30초 세그먼트 우선 생성
+    │ ⑤ Kafka: video.ready (첫 재생 가능)
+    ▼
+[VideoFly API] → Webhook 발송 → DB 상태 갱신
 ```
-
-**UI 동작:**
-1. 드래그 앤 드롭 또는 파일 선택
-2. "업로드 시작" 클릭 시 VideoFly API에서 서명 URL 발급
-3. 파일을 Mux로 직접 전송 (VideoFly 서버 통과 없음)
-4. 진행률 바 표시 (0~100%)
-5. 업로드 완료 → 인코딩 상태 표시 ("인코딩 중...")
-6. 인코딩 완료 → 동영상 상세 페이지로 이동
 
 **진행률 UI:**
 ```
-파일명: product-demo.mp4 (2.3 GB)
-[████████████░░░░░░░░] 60% — 1.38 GB / 2.3 GB
-예상 남은 시간: 약 2분
+source.mp4 업로드 중  (vid_01HXYZ456DEF)
+[████████████░░░░░░] 65%  1.5 GB / 2.3 GB
+예상 남은 시간: 약 1분 30초
+
+업로드 완료 후 JIT 프리워밍이 자동으로 시작됩니다.
 ```
 
 ### 3.2 URL로 가져오기 (URL Import)
 
-외부 URL에서 영상 파일 수집:
+외부 URL에서 OCI Object Storage로 직접 수집:
 
 ```
-URL 입력: https://cdn.example.com/video.mp4
+URL: [https://cdn.example.com/video.mp4          ]
 
-[가져오기 시작] 버튼
+지원: HTTPS 공개 URL · S3 서명 URL · GCS URL
+
+[가져오기 시작]
 ```
-
-**지원 URL 유형:**
-- HTTPS 공개 URL
-- Amazon S3 (서명된 URL)
-- Google Cloud Storage
-- Cloudflare R2
 
 **흐름:**
 ```
-[VideoFly API] → Mux API: POST /video/v1/assets
-  { "input": [{ "url": "https://..." }] }
-[Mux]: 백그라운드에서 URL 수집 및 인코딩 시작
-[Mux] → Webhook: video.asset.ready
+[VideoFly API Server]
+    │ OCI Object Storage로 URL 내용 직접 수집
+    ▼
+[OCI Object Storage] → vid_{ulid} ID 부여
+    │ Kafka: video.uploaded
+    ▼
+[JIT Engine Warm-up]
 ```
 
 ---
 
-## 4. 메타데이터 입력 필드
+## 4. 메타데이터 및 설정
+
+### 기본 정보
 
 | 필드 | 타입 | 필수 | 제한 |
 |------|------|------|------|
 | 제목 | text | 필수 | 최대 255자 |
 | 설명 | textarea | 선택 | 최대 5,000자 |
-| 태그 | tag input | 선택 | 쉼표 구분, 최대 20개 |
+| 태그 | tag input | 선택 | 최대 20개 |
 
 ### 고급 설정
 
 | 설정 | 기본값 | 설명 |
 |------|--------|------|
 | 재생 정책 | 공개(public) | `signed`: JWT 토큰 없이 재생 불가 |
-| MP4 다운로드 | 비활성 | `capped-1080p`, `audio-only` 옵션 |
-| 자동 자막 생성 | 비활성 | Mux AI 기반, 20개+ 언어 |
+| ABR 프로파일 세트 | 기본 (360p~1080p H.264) | 커스텀 프로파일 세트 선택 가능 (Pro 이상) |
 
 ---
 
@@ -127,58 +128,65 @@ URL 입력: https://cdn.example.com/video.mp4
 ```
 파일 선택
     ↓
-업로드 중 (0~100%)
+[1단계] 업로드 중 → OCI Object Storage 저장
     ↓
-인코딩 대기 (waiting)
+[2단계] JIT Warm-up 중 → 기본 프로파일 사전 처리
     ↓
-인코딩 중 (preparing)
-    ↓
-준비 완료 (ready) → 동영상 상세로 이동
-    또는
-오류 (errored)   → 오류 메시지 + 재시도 버튼
+[3단계] 재생 가능 (ready) → 동영상 상세 페이지 이동
+         또는
+         오류 (errored) → 오류 메시지 + 재시도 버튼
+```
+
+**상태 표시:**
+```
+✅ 업로드 완료   vid_01HXYZ456DEF
+⏳ JIT 프리워밍 중...
+   기본 프로파일(1080p) 처리 중입니다. 잠시 후 재생 가능합니다.
+   [배경에서 처리 중 — 다른 작업 계속하세요]
 ```
 
 ---
 
-## 6. 검증 규칙
-
-| 규칙 | 처리 |
-|------|------|
-| 파일 크기 > 플랜 허용 한도 | 업로드 시작 전 오류 표시 |
-| 지원하지 않는 파일 형식 | 파일 선택 시 즉시 경고 |
-| 제목 미입력 | 제출 시 인라인 오류 표시 |
-| 네트워크 중단 | 재개 가능 업로드 (tus 프로토콜 지원 시) |
-
----
-
-## 7. 다중 파일 업로드 (Phase 2)
-
-- 파일 여러 개 동시 선택 → 큐(Queue)로 순차 처리
-- 업로드 큐 UI: 파일별 상태, 진행률, 취소 버튼
-
----
-
-## 8. API 연동 예시
+## 6. API 연동
 
 ```bash
-# 1. 업로드 URL 발급
+# Step 1: 업로드 URL 발급
 POST /api/v1/videos/upload-url
-Authorization: Bearer {token}
+X-Org-ID: org_01HXYZ123ABC
+Authorization: Basic {key_id:secret}
 Content-Type: application/json
+
 {
-  "title": "제품 데모",
-  "playback_policy": "public"
+  "title": "제품 데모 v2",
+  "playback_policy": "public",
+  "profile_set": "default"
 }
+
+Response 201:
+{
+  "vid_id": "vid_01HXYZ456DEF",
+  "upload_url": "https://objectstorage.ap-seoul-1.oraclecloud.com/...",
+  "upload_method": "PUT",
+  "expires_at": "2024-03-15T10:00:00Z"
+}
+
+# Step 2: 파일 업로드 (클라이언트 → OCI 직접)
+PUT {upload_url}
+Content-Type: video/mp4
+Body: <binary>
+
+# Step 3: 상태 확인
+GET /api/v1/videos/vid_01HXYZ456DEF
+X-Org-ID: org_01HXYZ123ABC
 
 Response:
 {
-  "upload_url": "https://storage.googleapis.com/...",
-  "upload_id": "mux_upload_xxxx",
-  "asset_id": null  // 인코딩 완료 후 생성
+  "id": "vid_01HXYZ456DEF",
+  "status": "warming_up",
+  "profiles": {
+    "prof_1080p_h264": "generating",
+    "prof_720p_h264": "not_generated",
+    "prof_480p_h264": "not_generated"
+  }
 }
-
-# 2. 파일 업로드 (클라이언트 → Mux 직접)
-PUT {upload_url}
-Content-Type: video/mp4
-Body: <binary file>
 ```
